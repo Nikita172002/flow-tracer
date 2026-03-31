@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FlowTracer</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
+
+    .container { max-width: 1000px; margin: 0 auto; padding: 24px; }
+    h1 { font-size: 24px; font-weight: 600; margin-bottom: 8px; }
+    .subtitle { color: #94a3b8; margin-bottom: 32px; }
+
+    /* Setup panel */
+    .setup { background: #1e293b; border-radius: 12px; padding: 24px; margin-bottom: 24px; }
+    .setup h2 { font-size: 16px; margin-bottom: 16px; }
+    .setup label { display: block; font-size: 13px; color: #94a3b8; margin-bottom: 4px; }
+    .setup input, .setup textarea { width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: #e2e8f0; font-size: 14px; font-family: 'SF Mono', monospace; margin-bottom: 12px; }
+    .setup textarea { min-height: 80px; resize: vertical; }
+    .btn { padding: 10px 20px; border-radius: 8px; border: none; font-size: 14px; font-weight: 500; cursor: pointer; }
+    .btn-primary { background: #3b82f6; color: white; }
+    .btn-primary:hover { background: #2563eb; }
+    .btn-primary:disabled { background: #334155; color: #64748b; cursor: not-allowed; }
+    .status { font-size: 13px; color: #22c55e; margin-top: 8px; }
+    .status.error { color: #ef4444; }
+
+    /* Chat */
+    .chat { background: #1e293b; border-radius: 12px; overflow: hidden; }
+    .messages { max-height: 70vh; overflow-y: auto; padding: 24px; }
+    .message { margin-bottom: 24px; }
+    .message.user { padding-left: 40px; }
+    .message.user .content { background: #334155; border-radius: 12px; padding: 12px 16px; display: inline-block; }
+    .message.assistant .content { line-height: 1.7; }
+    .message .content h1, .message .content h2, .message .content h3 { margin: 16px 0 8px; }
+    .message .content h1 { font-size: 18px; }
+    .message .content h2 { font-size: 16px; }
+    .message .content h3 { font-size: 15px; }
+    .message .content p { margin-bottom: 8px; }
+    .message .content code { background: #334155; padding: 2px 6px; border-radius: 4px; font-size: 13px; }
+    .message .content pre { background: #0f172a; border-radius: 8px; padding: 16px; margin: 12px 0; overflow-x: auto; }
+    .message .content pre code { background: none; padding: 0; display: block; }
+    .message .content ul, .message .content ol { margin: 8px 0; padding-left: 24px; }
+    .message .content li { margin-bottom: 4px; }
+    .message .content blockquote { border-left: 3px solid #3b82f6; padding-left: 12px; margin: 8px 0; color: #94a3b8; }
+
+    /* Tables */
+    .message .content table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 14px; }
+    .message .content th { background: #334155; padding: 10px 12px; text-align: left; font-weight: 600; border: 1px solid #475569; }
+    .message .content td { padding: 8px 12px; border: 1px solid #475569; }
+    .message .content tr:nth-child(even) { background: rgba(51, 65, 85, 0.3); }
+    .message .content tr:hover { background: rgba(51, 65, 85, 0.5); }
+
+    /* Mermaid */
+    .mermaid-container { background: #ffffff; border-radius: 8px; padding: 20px; margin: 12px 0; overflow-x: auto; }
+    .mermaid-container svg { max-width: 100%; height: auto; }
+    .mermaid-error { color: #ef4444; background: #1e293b; padding: 12px; border-radius: 8px; font-size: 13px; white-space: pre-wrap; word-break: break-word; }
+
+    /* Input */
+    .input-bar { display: flex; gap: 8px; padding: 16px; border-top: 1px solid #334155; }
+    .input-bar input { flex: 1; padding: 12px 16px; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: #e2e8f0; font-size: 14px; }
+    .input-bar input:focus { outline: none; border-color: #3b82f6; }
+
+    .loading { display: inline-block; }
+    .loading::after { content: ''; display: inline-block; width: 16px; height: 16px; border: 2px solid #64748b; border-top-color: #3b82f6; border-radius: 50%; animation: spin 0.8s linear infinite; margin-left: 8px; vertical-align: middle; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>FlowTracer</h1>
+    <p class="subtitle">Ask questions about code flows across repos — get mermaid diagrams and answers</p>
+
+    <!-- Setup -->
+    <div class="setup" id="setup">
+      <h2>1. Register Repos</h2>
+      <label>Group Name</label>
+      <input type="text" id="groupName" placeholder="e.g., my-platform" value="">
+      <label>Repo Paths (one per line)</label>
+      <textarea id="repoPaths" placeholder="/Users/you/repos/frontend&#10;/Users/you/repos/backend&#10;/Users/you/repos/shared-lib"></textarea>
+      <button class="btn btn-primary" id="indexBtn" onclick="registerRepos()">Index Repos</button>
+      <div class="status" id="indexStatus"></div>
+    </div>
+
+    <!-- Chat -->
+    <div class="chat" id="chatPanel" style="display: none;">
+      <div class="messages" id="messages"></div>
+      <div class="input-bar">
+        <input type="text" id="questionInput" placeholder="Ask a question... e.g., How does the order flow work for magento?" onkeydown="if(event.key==='Enter')askQ()">
+        <button class="btn btn-primary" id="askBtn" onclick="askQ()">Ask</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    mermaid.initialize({ startOnLoad: false, theme: 'default', securityLevel: 'loose' });
+
+    let currentGroup = null;
+    let sessionId = null;
+    let mermaidCounter = 0;
+
+    async function registerRepos() {
+      const name = document.getElementById('groupName').value.trim();
+      const paths = document.getElementById('repoPaths').value.trim().split('\n').map(p => p.trim()).filter(Boolean);
+      const status = document.getElementById('indexStatus');
+      const btn = document.getElementById('indexBtn');
+
+      if (!name || !paths.length) { status.textContent = 'Fill in group name and at least one repo path'; status.className = 'status error'; return; }
+
+      btn.disabled = true;
+      status.textContent = 'Indexing repos...';
+      status.className = 'status';
+
+      try {
+        const res = await fetch('/repos', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, paths }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+
+        currentGroup = name;
+        sessionId = null;
+        const repoTags = data.repos.map(r => `${r.name} (${r.files} files)`).join(', ');
+        status.textContent = `Indexed: ${repoTags}. Total: ${data.totals.files} files.`;
+        document.getElementById('chatPanel').style.display = 'block';
+        document.getElementById('messages').innerHTML = '';
+        document.getElementById('questionInput').focus();
+      } catch (err) {
+        status.textContent = err.message;
+        status.className = 'status error';
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    async function askQ() {
+      const input = document.getElementById('questionInput');
+      const question = input.value.trim();
+      if (!question) return;
+
+      input.value = '';
+      addMessage('user', question);
+
+      const loadingEl = addMessage('assistant', '<span class="loading">Thinking</span>');
+      document.getElementById('askBtn').disabled = true;
+
+      try {
+        const url = sessionId ? `/ask/${sessionId}` : '/ask';
+        const body = sessionId ? { question } : { repos: currentGroup, question };
+
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+
+        sessionId = data.sessionId || sessionId;
+        loadingEl.querySelector('.content').innerHTML = renderMarkdown(data.answer);
+        await renderMermaidDiagrams();
+      } catch (err) {
+        loadingEl.querySelector('.content').innerHTML = `<span style="color:#ef4444">${err.message}</span>`;
+      } finally {
+        document.getElementById('askBtn').disabled = false;
+        input.focus();
+      }
+    }
+
+    function addMessage(role, html) {
+      const messages = document.getElementById('messages');
+      const div = document.createElement('div');
+      div.className = `message ${role}`;
+      div.innerHTML = `<div class="content">${html}</div>`;
+      messages.appendChild(div);
+      messages.scrollTop = messages.scrollHeight;
+      return div;
+    }
+
+    // ── Mermaid Sanitizer ──────────────────────────────────
+
+    function sanitizeMermaid(code) {
+      // 0. Fix multi-line node labels — the #1 cause of mermaid errors.
+      //    LLM generates:  A["Pay Button Click\n(+page.svelte)"]
+      //    Mermaid needs:  A["Pay Button Click (+page.svelte)"]
+      //    Strategy: join lines that are inside unclosed brackets.
+      const joinedLines = [];
+      let bracketDepth = 0;
+      for (const rawLine of code.split('\n')) {
+        const line = rawLine.trimEnd();
+        if (bracketDepth > 0) {
+          // We're inside an unclosed bracket — append to previous line
+          joinedLines[joinedLines.length - 1] += ' ' + line.trim();
+        } else {
+          joinedLines.push(line);
+        }
+        // Count brackets on the resulting line
+        const current = joinedLines[joinedLines.length - 1];
+        const opens = (current.match(/[\["(\{]/g) || []).length;
+        const closes = (current.match(/[\]"\)}\]]/g) || []).length;
+        // More accurate: count [ and ] specifically for mermaid node syntax
+        const openSquare = (current.match(/\[/g) || []).length;
+        const closeSquare = (current.match(/\]/g) || []).length;
+        bracketDepth = openSquare - closeSquare;
+        if (bracketDepth < 0) bracketDepth = 0;
+      }
+      code = joinedLines.join('\n');
+
+      // 1. Remove %% comments
+      code = code.replace(/%%[^\n]*/g, '');
+
+      // 2. Fix "end" + "subgraph" on same line, and similar multi-statement issues
+      let prev;
+      do {
+        prev = code;
+        code = code.replace(/\bend\b[ \t]+(subgraph\b)/gi, 'end\n    $1');
+        code = code.replace(/\bend\b[ \t]{2,}(\w)/gi, 'end\n    $1');
+        code = code.replace(/(\|\s*[\w"]+)[ \t]{2,}(\w+\s*-->)/g, '$1\n    $2');
+      } while (code !== prev);
+
+      // 3. Replace actual newlines inside quoted labels with <br/>
+      //    Catches any remaining multi-line labels after join
+      code = code.replace(/"([^"]*?)"/g, (match, inner) => {
+        return '"' + inner.replace(/\n\s*/g, '<br/>') + '"';
+      });
+
+      // 4. Clean up
+      return code.split('\n')
+        .map(l => l.trimEnd())
+        .filter((l, i, arr) => !(l === '' && i > 0 && arr[i - 1] === ''))
+        .join('\n');
+    }
+
+    // ── Markdown Renderer ──────────────────────────────────
+
+    function renderMarkdown(text) {
+      // Extract mermaid blocks BEFORE markdown parsing to prevent marked from mangling them
+      const mermaidPlaceholders = {};
+
+      text = text.replace(/```mermaid\n([\s\S]*?)```/g, (_, code) => {
+        const id = `mermaid-${mermaidCounter++}`;
+        const clean = sanitizeMermaid(code.trim());
+        mermaidPlaceholders[id] = clean;
+        return `<!--MERMAID:${id}-->`;
+      });
+
+      // Parse markdown with marked (handles tables, lists, code blocks, etc.)
+      const html = marked.parse(text);
+
+      // Replace mermaid placeholders with actual diagram containers
+      const finalHtml = html.replace(/<!--MERMAID:(\w+-\d+)-->/g, (_, id) => {
+        const code = mermaidPlaceholders[id] || '';
+        return `<div class="mermaid-container"><div class="mermaid" id="${id}">${escapeHtml(code)}</div></div>`;
+      });
+
+      return finalHtml;
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    // ── Mermaid Renderer ──────────────────────────────────
+
+    async function renderMermaidDiagrams() {
+      const elements = document.querySelectorAll('.mermaid:not([data-processed])');
+      for (const el of elements) {
+        el.setAttribute('data-processed', 'true');
+        try {
+          // Decode the escaped HTML back to raw mermaid code
+          const raw = el.textContent;
+          const { svg } = await mermaid.render(el.id + '-svg', raw);
+          el.innerHTML = svg;
+        } catch (err) {
+          const raw = el.textContent;
+          el.innerHTML = `<div class="mermaid-error">Mermaid render error: ${err.message}\n\nSanitized code:\n${raw}</div>`;
+        }
+      }
+    }
+  </script>
+</body>
+</html>

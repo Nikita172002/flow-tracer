@@ -1,0 +1,29 @@
+{
+  "name": "flow-tracer",
+  "version": "0.2.0",
+  "description": "Trace code flows across repos — get mermaid diagrams. Works as MCP server or web UI.",
+  "type": "module",
+  "bin": {
+    "flow-tracer": "./bin/flow-tracer.js"
+  },
+  "scripts": {
+    "start": "node bin/flow-tracer.js",
+    "serve": "node bin/flow-tracer.js serve",
+    "mcp": "node bin/flow-tracer.js mcp"
+  },
+  "keywords": [
+    "mcp",
+    "code-flow",
+    "mermaid",
+    "architecture",
+    "cross-repo",
+    "claude"
+  ],
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "@modelcontextprotocol/sdk": "^1.12.1",
+    "express": "^5.1.0",
+    "glob": "^11.0.1",
+    "zod": "^4.3.6"
+  }
+}

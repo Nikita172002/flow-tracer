@@ -1,0 +1,6 @@
+node_modules/
+.tmp/
+flow-index/
+*.log
+.env
+.DS_Store
