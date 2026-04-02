@@ -19,6 +19,7 @@ const TMP_DIR = join(dirname(new URL(import.meta.url).pathname), "../.tmp");
 mkdirSync(TMP_DIR, { recursive: true });
 
 const API_KEY = process.env.ANTHROPIC_API_KEY;
+const API_BASE_URL = process.env.ANTHROPIC_BASE_URL;
 const FILE_SELECT_MODEL = process.env.FILE_SELECT_MODEL || "claude-haiku-4-5-20251001";
 const ANALYSIS_MODEL = process.env.ANALYSIS_MODEL || "claude-sonnet-4-20250514";
 
@@ -66,6 +67,7 @@ RESPONSE FORMAT (follow this strictly for EVERY flow):
 
 CRITICAL mermaid syntax rules (violations cause render failures):
 - Every \`end\` keyword MUST be alone on its own line
+- Every \`end\` MUST have a matching \`subgraph\` — do NOT add an extra \`end\` at the bottom of the diagram. The number of \`end\` keywords must EXACTLY equal the number of \`subgraph\` keywords.
 - NEVER put \`end\` and \`subgraph\` on the same line
 - NEVER use \`%%\` comments — they break rendering
 - Every node definition and every edge must be on its own line
@@ -131,7 +133,7 @@ function callCLI(prompt) {
 async function callAPI(prompt, model) {
   // Dynamic import so the SDK is only loaded if API key is set
   const { default: Anthropic } = await import("@anthropic-ai/sdk");
-  const client = new Anthropic({ apiKey: API_KEY });
+  const client = new Anthropic({ apiKey: API_KEY, ...(API_BASE_URL && { baseURL: API_BASE_URL }) });
 
   const response = await client.messages.create({
     model,

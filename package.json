@@ -4,7 +4,7 @@
   "description": "Trace code flows across repos — get mermaid diagrams. Works as MCP server or web UI.",
   "type": "module",
   "bin": {
-    "flow-tracer": "./bin/flow-tracer.js"
+    "flow-tracer": "bin/flow-tracer.js"
   },
   "scripts": {
     "start": "node bin/flow-tracer.js",

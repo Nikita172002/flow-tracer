@@ -8,7 +8,19 @@
  *   flow-tracer mcp          → starts MCP server (explicit)
  *   flow-tracer serve        → starts web UI server on port 3847
  *   flow-tracer serve 8080   → starts web UI on custom port
+ *
+ * Supports .env file in the project root for configuration.
  */
+
+import { existsSync } from "fs";
+import { fileURLToPath } from "url";
+import { dirname, join } from "path";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const envPath = join(__dirname, "..", ".env");
+if (existsSync(envPath)) {
+  process.loadEnvFile(envPath);
+}
 
 const [,, command, ...args] = process.argv;
 
