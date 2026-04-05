@@ -54,9 +54,15 @@
     .message .content tr:hover { background: rgba(51, 65, 85, 0.5); }
 
     /* Mermaid */
-    .mermaid-container { background: #ffffff; border-radius: 8px; padding: 20px; margin: 12px 0; overflow-x: auto; }
+    .mermaid-container { background: #ffffff; border-radius: 8px; margin: 12px 0; overflow-x: auto; position: relative; }
+    .mermaid-container .mermaid-toolbar { display: flex; gap: 6px; padding: 8px 12px; background: #f1f5f9; border-radius: 8px 8px 0 0; border-bottom: 1px solid #e2e8f0; }
+    .mermaid-container .mermaid-content { padding: 20px; }
     .mermaid-container svg { max-width: 100%; height: auto; }
     .mermaid-error { color: #ef4444; background: #1e293b; padding: 12px; border-radius: 8px; font-size: 13px; white-space: pre-wrap; word-break: break-word; }
+    .copy-btn { padding: 4px 10px; border-radius: 6px; border: 1px solid #cbd5e1; background: #ffffff; color: #475569; font-size: 12px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 4px; transition: all 0.15s; }
+    .copy-btn:hover { background: #e2e8f0; color: #1e293b; }
+    .copy-btn.copied { background: #22c55e; color: white; border-color: #22c55e; }
+    .copy-btn svg { width: 14px; height: 14px; }
 
     /* Input */
     .input-bar { display: flex; gap: 8px; padding: 16px; border-top: 1px solid #334155; }
@@ -251,10 +257,17 @@
       // Parse markdown with marked (handles tables, lists, code blocks, etc.)
       const html = marked.parse(text);
 
-      // Replace mermaid placeholders with actual diagram containers
+      // Replace mermaid placeholders with actual diagram containers + toolbar
       const finalHtml = html.replace(/<!--MERMAID:(\w+-\d+)-->/g, (_, id) => {
         const code = mermaidPlaceholders[id] || '';
-        return `<div class="mermaid-container"><div class="mermaid" id="${id}">${escapeHtml(code)}</div></div>`;
+        return `<div class="mermaid-container" data-mermaid-code="${escapeHtml(code)}">` +
+          `<div class="mermaid-toolbar">` +
+            `<button class="copy-btn" onclick="copyMermaidCode(this)" title="Copy Mermaid code">` +
+              `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>` +
+              `Copy Code</button>` +
+          `</div>` +
+          `<div class="mermaid-content"><div class="mermaid" id="${id}">${escapeHtml(code)}</div></div>` +
+        `</div>`;
       });
 
       return finalHtml;
@@ -281,6 +294,24 @@
         }
       }
     }
+
+    // ── Copy Functions ──────────────────────────────────────
+
+    function flashCopied(btn) {
+      const original = btn.innerHTML;
+      btn.classList.add('copied');
+      btn.innerHTML = btn.innerHTML.replace(/Copy \w+/, 'Copied!');
+      setTimeout(() => { btn.classList.remove('copied'); btn.innerHTML = original; }, 1500);
+    }
+
+    function copyMermaidCode(btn) {
+      const container = btn.closest('.mermaid-container');
+      const code = container.getAttribute('data-mermaid-code');
+      navigator.clipboard.writeText(code)
+        .then(() => flashCopied(btn))
+        .catch(() => {});
+    }
+
   </script>
 </body>
 </html>
