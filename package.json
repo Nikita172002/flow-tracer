@@ -1,6 +1,6 @@
 {
   "name": "flow-tracer",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Trace code flows across repos — get mermaid diagrams. Works as MCP server or web UI.",
   "type": "module",
   "bin": {
